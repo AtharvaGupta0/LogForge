@@ -1,30 +1,49 @@
-with open("samples/system.log", "r") as file:
-    for line in file:
-        try:
-            timestamp = line[:15]
-            remainder = line[16:]
-            hostname, rest = remainder.split(" ", 1)
-            source_part, message = rest.split(" ", 1)
-            source = source_part.rstrip(":")
+import sys
 
-            normalized_log = {
-                "timestamp": timestamp,
-                "hostname": hostname,
-                "source": source,
+from detector import detect_format
+from parsers import system_parser, apache_parser
 
-                "source_ip": None,
-                "destination_ip": None,
+PARSERS = {
+    "system": system_parser.parse_line,
+    "apache": apache_parser.parse_line,
+}
 
-                "protocol": None,
-                "action": None,
-                "status_code": None,
 
-                "message": message.rstrip("\n"),
+def main():
+    if len(sys.argv) != 2:
+        print("Usage: python backend/main.py <path-to-log-file>")
+        return
 
-                "raw_log": line.rstrip("\n"),
+    filepath = sys.argv[1]
 
-                "extra_fields": {}
-            }
-            print(normalized_log)
-        except ValueError:
-            print("Skipping malformed line:", line)
+    detected = detect_format(filepath)
+    print(f"Detected format: {detected}")
+
+    if detected == "unknown":
+        print("Unsupported or unrecognised log format.")
+        return
+
+    parse_line = PARSERS[detected]
+
+    parsed_count = 0
+    failed_count = 0
+
+    with open(filepath, "r") as file:
+        for line in file:
+            if not line.strip():
+                continue
+
+            result = parse_line(line)
+            if result is not None:
+                print(result)
+                parsed_count += 1
+            else:
+                failed_count += 1
+
+    print()
+    print(f"Parsed: {parsed_count}")
+    print(f"Failed: {failed_count}")
+
+
+if __name__ == "__main__":
+    main()
