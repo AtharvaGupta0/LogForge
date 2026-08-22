@@ -1,7 +1,15 @@
-from parsers import system_parser, apache_parser
+from parsers import system_parser, apache_parser, firewall_parser
 
 SAMPLE_SIZE = 10           # how many non-empty lines to inspect
 CONFIDENCE_THRESHOLD = 0.5  # a format must explain at least half the sample
+
+# Order here also acts as the tie-breaker if two formats ever score
+# exactly equally (the first one listed wins).
+PARSER_CANDIDATES = {
+    "apache": apache_parser.parse_line,
+    "system": system_parser.parse_line,
+    "firewall": firewall_parser.parse_line,
+}
 
 
 def _read_sample_lines(filepath, max_lines=SAMPLE_SIZE):
@@ -19,7 +27,7 @@ def _read_sample_lines(filepath, max_lines=SAMPLE_SIZE):
 def detect_format(filepath):
     """
     Inspects the content of a handful of lines from the file and
-    returns "system", "apache", or "unknown".
+    returns "system", "apache", "firewall", or "unknown".
     """
     sample_lines = _read_sample_lines(filepath)
 
@@ -27,19 +35,16 @@ def detect_format(filepath):
         return "unknown"
 
     total = len(sample_lines)
-    apache_matches = sum(
-        1 for line in sample_lines if apache_parser.parse_line(line) is not None
-    )
-    system_matches = sum(
-        1 for line in sample_lines if system_parser.parse_line(line) is not None
-    )
 
-    apache_ratio = apache_matches / total
-    system_ratio = system_matches / total
+    scores = {}
+    for name, parse_line in PARSER_CANDIDATES.items():
+        matches = sum(1 for line in sample_lines if parse_line(line) is not None)
+        scores[name] = matches / total
 
-    if apache_ratio >= CONFIDENCE_THRESHOLD and apache_ratio >= system_ratio:
-        return "apache"
-    if system_ratio >= CONFIDENCE_THRESHOLD and system_ratio > apache_ratio:
-        return "system"
+    best_format = max(scores, key=scores.get)
+    best_ratio = scores[best_format]
+
+    if best_ratio >= CONFIDENCE_THRESHOLD:
+        return best_format
 
     return "unknown"

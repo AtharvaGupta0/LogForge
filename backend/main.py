@@ -1,11 +1,12 @@
 import sys
 
 from detector import detect_format
-from parsers import system_parser, apache_parser
+from parsers import system_parser, apache_parser, firewall_parser
 
 PARSERS = {
     "system": system_parser.parse_line,
     "apache": apache_parser.parse_line,
+    "firewall": firewall_parser.parse_line,
 }
 
 
