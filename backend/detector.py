@@ -1,4 +1,4 @@
-from parsers import system_parser, apache_parser, firewall_parser
+from parsers import system_parser, apache_parser, firewall_parser, json_parser
 
 SAMPLE_SIZE = 10           # how many non-empty lines to inspect
 CONFIDENCE_THRESHOLD = 0.5  # a format must explain at least half the sample
@@ -9,6 +9,7 @@ PARSER_CANDIDATES = {
     "apache": apache_parser.parse_line,
     "system": system_parser.parse_line,
     "firewall": firewall_parser.parse_line,
+    "json": json_parser.parse_line,
 }
 
 
@@ -27,7 +28,7 @@ def _read_sample_lines(filepath, max_lines=SAMPLE_SIZE):
 def detect_format(filepath):
     """
     Inspects the content of a handful of lines from the file and
-    returns "system", "apache", "firewall", or "unknown".
+    returns "system", "apache", "firewall", "json", or "unknown".
     """
     sample_lines = _read_sample_lines(filepath)
 
